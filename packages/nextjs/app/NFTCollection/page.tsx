@@ -5,12 +5,12 @@ import type { NextPage } from "next";
 import { useAccount } from "wagmi";
 import { MyHoldings } from "~~/components/simpleNFT";
 import { useScaffoldContractRead } from "~~/hooks/scaffold-eth";
-import axios from "axios";
+import { notification } from "~~/utils/scaffold-eth";
 
 interface NftInfo {
   image: string;
   id: number;
-  name: string;
+  name: string;git add app/NFTCollection/page.tsx
   attributes: { trait_type: string; value: string }[];
   owner: string;
   price: string;
@@ -26,8 +26,7 @@ const NFTCollection: NextPage = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [selectedType, setSelectedType] = useState<string>('Buy Now');
   const [sortType, setSortType] = useState<string>('newest');
-  const [searchTerm, setSearchTerm] = useState<string>('');
-  const [priceRange, setPriceRange] = useState<{ min: number; max: number }>({ min: 0, max: 100 });
+  const [isLoading, setIsLoading] = useState(true);
 
   const { data: tokenIdCounter } = useScaffoldContractRead({
     contractName: "YourCollectible",
@@ -36,31 +35,34 @@ const NFTCollection: NextPage = () => {
     cacheOnBlock: true,
   });
 
-  useEffect(() => {
-    const fetchNFTs = async () => {
-      try {
-        // 获取所有 NFTs
-        const response = await axios.get(`http://localhost:4000/getMyNfts/${connectedAddress}`);
-        const nfts = response.data.nfts.map((nft: any) => ({
-          image: nft.nft_image,
-          id: nft.nft_id,
-          name: nft.nft_name,
-          attributes: nft.attributes,
-          owner: nft.owner,
-          price: nft.price,
-          description: nft.description,
-          Shelves: nft.Shelves,
-          PurchasePrice: nft.PurchasePrice,
-          CID: nft.CID
-        }));
-        setCreatedNFTs(nfts);
-      } catch (error) {
-        console.error("Error fetching NFTs:", error);
+  // 从数据库获取 NFT 数据
+  const fetchNFTs = async () => {
+    try {
+      setIsLoading(true);
+      const response = await fetch('/api/Nft');
+      
+      if (!response.ok) {
+        throw new Error('获取NFT数据失败');
       }
-    };
 
+      const data = await response.json();
+      console.log('从数据库获取的NFT数据:', data);
+      
+      if (data.nfts) {
+        setCreatedNFTs(data.nfts);
+      }
+    } catch (error) {
+      console.error('获取NFT数据出错:', error);
+      notification.error(error instanceof Error ? error.message : "获取NFT数据失败");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // 组件加载时获取数据
+  useEffect(() => {
     fetchNFTs();
-  }, [connectedAddress]);
+  }, [connectedAddress]); // 当地址改变时重新获取
 
   const filteredNFTs = useMemo(() => {
     let filtered = [...createdNFTs];
@@ -354,9 +356,19 @@ const NFTCollection: NextPage = () => {
                 </select>
               </div>
 
-              {/* NFT列表 - 使用排序后的数据 */}
+              {/* NFT列表 - 添加加载状态 */}
               <div className="bg-[#1a1147]/50 rounded-lg p-4">
-                <MyHoldings filteredNFTs={sortedNFTs} />
+                {isLoading ? (
+                  <div className="flex justify-center items-center h-64">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500"></div>
+                  </div>
+                ) : sortedNFTs.length > 0 ? (
+                  <MyHoldings filteredNFTs={sortedNFTs} />
+                ) : (
+                  <div className="text-center text-gray-400 py-12">
+                    暂无NFT数据
+                  </div>
+                )}
               </div>
             </div>
           </div>
