@@ -19,15 +19,12 @@ interface Collectible {
   attributes: { trait_type: string; value: string }[];
   owner: string;
   description: string;
-  Shelves: number;
   CID: string;
-  PurchasePrice: string;
 }
 
 interface ListedNftInfo {
   id: number;
   price: string;
-  PurchasePrice: string;
 }
 
 const AllNFTs: NextPage = () => {
@@ -192,12 +189,8 @@ const AllNFTs: NextPage = () => {
     setCurrentPage(1); // 重置到第一页
   }, [searchText, allNFTs]);
 
-  const openModal = (nft: any) => {
-    console.log("Opening modal with NFT:", nft); // 调试日志
-    setSelectedNft({
-      ...nft,
-      PurchasePrice: nft.PurchasePrice // 确保包含 PurchasePrice
-    });
+  const openModal = (nft: Collectible) => {
+    setSelectedNft(nft);
     setIsModalOpen(true);
   };
 
@@ -238,6 +231,7 @@ const AllNFTs: NextPage = () => {
         return;
       }
 
+      // 确保地址格式正确
       const ownerAddress = selectedNft.owner.toLowerCase();
       
       // 显示加载中消息

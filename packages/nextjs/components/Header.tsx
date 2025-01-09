@@ -79,6 +79,11 @@ export const menuLinks: HeaderMenuLink[] = [
     href: "/NFTMarket",
     icon: <PhotoIcon className="h-4 w-4" />,
   },
+  {
+    label: "NFT元宇宙",
+    href: "/VR",
+    icon: <PhotoIcon className="h-4 w-4" />,
+  },
 ];
 
 export const HeaderMenuLinks = () => {

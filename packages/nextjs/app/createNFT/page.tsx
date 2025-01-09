@@ -95,28 +95,21 @@ const CreateNFT: NextPage = () => {
 
   // 加载已保存的NFT和图片数据
   useEffect(() => {
-    const fetchNFTs = async () => {
-      if (connectedAddress) {
-        try {
-          const response = await axios.get(`http://localhost:4000/getownerNfts/${connectedAddress}`);
-          const nfts = response.data.nfts.map((nft: any) => ({
-            image: nft.nft_image,
-            id: nft.nft_id,
-            name: nft.nft_name,
-            attributes: nft.attributes,
-            owner: nft.owner,
-            price: nft.price,
-            description: nft.description,
-            CID: nft.CID
-          }));
-          setCreatedNFTs(nfts);
-        } catch (error) {
-          console.error("Error fetching NFTs:", error);
-        }
-      }
-    };
+    const storedNFTs = localStorage.getItem("createdNFTs");
+    if (storedNFTs) {
+      setCreatedNFTs(JSON.parse(storedNFTs));
+    }
 
-    fetchNFTs();
+    // 加载已上传的图片数据
+    const data: { id: number, name: string, onChainAddress: string }[] = [];
+    let id = 1;
+    let storedData = localStorage.getItem(`image_${id}`);
+    while (storedData) {
+      data.push(JSON.parse(storedData));
+      id++;
+      storedData = localStorage.getItem(`image_${id}`);
+    }
+    setImageData(data);
   }, [connectedAddress]);
 
   // NFT信息变更处理
@@ -238,12 +231,10 @@ const CreateNFT: NextPage = () => {
         });
 
         const newId = Number(tokenIdCounter) + 1;
-        
-        // 准备发送到服务器的数据
-        const nftData = {
-          nft_id: newId,
-          nft_name: name,
-          nft_image: image,
+        const newNftInfo: NftInfo = {
+          ...nftInfo,
+          id: newId,
+          owner: connectedAddress || "",
           CID: uploadedItem.CID,
           isListed: false
         };
@@ -258,40 +249,6 @@ const CreateNFT: NextPage = () => {
           return updatedNFTs;
         });
 
-        try {
-          // 发送到服务器
-          const response = await axios.post('http://localhost:4000/mintNFT', nftData, {
-            headers: {
-              'Content-Type': 'application/json'
-            }
-          });
-          console.log("服务器响应:", response.data);
-          
-          // 更新本地状态
-          const newNftInfo: NftInfo = {
-            ...nftInfo,
-            id: newId,
-            owner: connectedAddress || "",
-            CID: uploadedItem.CID,
-          };
-          setCreatedNFTs(prev => [...prev, newNftInfo]);
-
-        } catch (error) {
-          if (axios.isAxiosError(error)) {
-            console.error("API 错误:", {
-              message: error.message,
-              status: error.response?.status,
-              data: error.response?.data
-            });
-            notification.error(`保存失败: ${error.message}`);
-          } else {
-            console.error("未知错误:", error);
-            notification.error("发生未知错误");
-          }
-          return;
-        }
-
-        // 重置表单
         setNftInfo({
           image: "",
           id: Date.now(),
@@ -302,6 +259,8 @@ const CreateNFT: NextPage = () => {
           description: "",
           isListed: false
         });
+      } else {
+        notification.error("无法获取TokenIdCounter");
       }
     } catch (error) {
       notification.remove(notificationId);
